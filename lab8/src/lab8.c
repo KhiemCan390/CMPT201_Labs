@@ -134,6 +134,7 @@ int main(void) {
     // --------- Task 4 --------- \\
     // Sort the table by the sort function in uthash using `sort_func`.
     // TODO
+    // HASH_SORT(word_map, sort_func);
     print_counts(word_map);
   }
 
