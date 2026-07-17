@@ -134,7 +134,7 @@ int main(void) {
     // --------- Task 4 --------- \\
     // Sort the table by the sort function in uthash using `sort_func`.
     // TODO
-    // HASH_SORT(word_map, sort_func);
+    HASH_SORT(word_map, sort_func);
     print_counts(word_map);
   }
 
@@ -158,10 +158,13 @@ word_count_entry_t *create_entry(word_t word, size_t count) {
 int sort_func(word_count_entry_t *a, word_count_entry_t *b) { return strcmp(a->word, b->word); }
 
 void print_counts(count_map_t word_map) {
+  // -32s means left-aligning the value (-), using a field at least 32 char wide (32), and printing
+  // a string (s)
   printf("%-32s%-10s\n", "Word", "Count");
 
   word_count_entry_t *current, *tmp;
-
+  // similar to -32s, -10zu means printing a size_t as unsigned decimal integer with field width
+  // at least 10
   HASH_ITER(hh, word_map, current, tmp) { printf("%-32s%-10zu\n", current->word, current->count); }
 }
 
