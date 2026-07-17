@@ -58,7 +58,7 @@ int main() {
 
   // Step 2: Grouping phase
 
-  Output output_results[MAX_INPUT] = {0};
+  Output output_results[MAX_INPUT] = {0}; //this means we initiate all attribute of each element in output_results, including array's elements, to be 0.
   int result_count = 0;
 
   for (int i = 0; i < input_size; i++) {
