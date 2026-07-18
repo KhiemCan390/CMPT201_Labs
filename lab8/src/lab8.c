@@ -35,14 +35,30 @@ static void add_word_counts_in_chunk(count_map_t *map, word_t *words, size_t num
 
   for (size_t i = 0; i < num_words; i++) {
     word_count_entry_t *w = NULL;
+    // The hash-table entry is word_count_entry_t
+    // where word_t word is the key, size_t count is the value, and UT_hash_handle_hh is
+    // uthash bookkepping
+    // HASH_FIND_STR(*map, words[i],w) means search the hash table *map for an entry whose string
+    // key equals words[i], and store the pointer at the result pointer w. Consider the argument
+    // count_map_t *map, we are given typedef wrod_count_entry_t *count_map_t thus map is a pointer
+    // points to a count_map_t var which points to a word_count_entry_t, thus by deref map i.e. *map
+    // gives the pointer points to a word_count_entry_t. In this case, it is the pointer points to
+    // the first element of the hash table, whhich we need to pass to HASH_FIND_STR and HASH_ADD_STR
+
+    pthread_mutex_lock(lock);
     HASH_FIND_STR(*map, words[i], w);
 
     if (w) {
+      // if the word is already in the table
       w->count++;
     } else {
+      // create a new entry and set its count to 1
       w = create_entry(words[i], 1);
+      // add the complete structure pointed by w to the hash table *map, using w->word as its string
+      // key (word here is a field name, which tells uthash to use w->word)
       HASH_ADD_STR(*map, word, w);
     }
+    pthread_mutex_unlock(lock);
   }
 }
 
@@ -139,8 +155,8 @@ int main(void) {
   count_map_t word_map = NULL;
 
   // Task 2: Replace this function call with the parallelized version.
-  word_map = count_words_seq(words_in, words_in_len);
-  // word_map = count_words_parallel(words_in, words_in_len);
+  // word_map = count_words_seq(words_in, words_in_len);
+  word_map = count_words_parallel(words_in, words_in_len);
 
   // Print table
   if (word_map) {
