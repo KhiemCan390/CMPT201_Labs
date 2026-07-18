@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 4.22)
 
 project(
   Lab8
@@ -15,7 +15,8 @@ set(CMAKE_BUILD_TYPE Debug)
 # --------- Task 3 ---------
 # Enable the thread sanitizer 
 # TODO
-
+add_compile_options(-fsanitize=thread -g -O1)
+add_link_options(-fsanitize=thread -g -O1)
 
 add_compile_options(-pthread)
 add_link_options(-pthread)

@@ -1,4 +1,4 @@
-// Lab 8 - Starting Code for sorting data in threads using uthash
+// Lab 8 - Starting Code for sorting data ie ehreads using uthash
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,18 +82,36 @@ static count_map_t count_words_parallel(word_t *words, size_t num_words) {
 
   // Launch threads
   for (size_t i = 0; i < THREAD_COUNT; i++) {
-    word_t *thread_arg_words = words + i * chunk_size; // computing the begin of each chunk
+    word_t *thread_arg_words = words + i * chunk_size; // pointer arithmetic,
+                                                       // computing the begin of each chunk
                                                        // e.g. i = 1, words + 1 * 4 = &words[4]
     size_t thread_arg_num_words =
         chunk_size + (i == THREAD_COUNT - 1 ? num_words % THREAD_COUNT : 0);
+    // if this thread is the last thread, i.e. i == 2, then the number of element is 4 + (13%3) = 5
+    // otherwise 4
 
     // TODO: Prepare the arguments and launch the threads
+    count_thread_args_t *args =
+        pack_args(&map, thread_arg_words, thread_arg_num_words, &count_mutex);
+    threads_args[i] = args; // saving the argument structure so we can free them later
+    pthread_create(&threads[i], NULL, counter_thread_func, args);
+    // The arguments are : wherte to store the thread id, default thread attributes, function for
+    // the thread to run, args are arguments passed to that function.
+    // end of TODO
   }
 
   // TODO: Wait for threads to finish
-
-  // TODO: Cleanup
-
+  // have to join them, otherwise they may jump immediately to return map while threads haven't
+  // complete running
+  for (size_t i = 0; i < THREAD_COUNT; i++) {
+    pthread_join(threads[i], NULL);
+  }
+  // end of TODO
+  //  TODO: Cleanup
+  for (int i = 0; i < THREAD_COUNT; i++) {
+    free(threads_args[i]); // since pack_args uses malloc
+  }
+  // This doesn't free the input array, the hash table, or destroy the mutex
   return map;
 }
 
@@ -167,6 +185,8 @@ void delete_table(count_map_t word_map) {
 
 count_thread_args_t *pack_args(count_map_t *map, word_t *words, size_t num_words,
                                pthread_mutex_t *lock) {
+  // we pass &map because map is a pointer to the first element, and we need to change it when the
+  // first entry is added.
   count_thread_args_t *args = malloc(sizeof(count_thread_args_t));
   args->map = map;
   args->words = words;
@@ -177,7 +197,7 @@ count_thread_args_t *pack_args(count_map_t *map, word_t *words, size_t num_words
 
 static void *counter_thread_func(void *param) {
   // Call count_words_in_chunk with the appropriate arguments
-  count_thread_args_t *args = (count_thread_args_t *)param;
+  count_thread_args_t *args = (count_thread_args_t *)param; // have to cast back
   add_word_counts_in_chunk(args->map, args->words, args->num_words, args->lock);
 
   return NULL;
