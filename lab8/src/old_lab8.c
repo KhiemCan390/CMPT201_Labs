@@ -1,9 +1,8 @@
-// Lab 8 - Starting Code for sorting data in threads using uthash
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <uthash.h>
-#define THREAD_COUNT 3
+
 typedef const char *word_t;
 
 typedef struct {
@@ -16,13 +15,11 @@ word_count_entry_t *create_entry(word_t, size_t);
 
 typedef word_count_entry_t *count_map_t;
 
-// Each thread needs to know
-
 typedef struct {
-  count_map_t *map;      // which map to update
-  word_t *words;         // where its chunk begins
-  size_t num_words;      // the number of words in its chunk
-  pthread_mutex_t *lock; // which mutex protect the map
+  count_map_t *map;
+  word_t *words;
+  size_t num_words;
+  pthread_mutex_t *lock;
 } count_thread_args_t;
 
 count_thread_args_t *pack_args(count_map_t *map, word_t *words, size_t num_words,
@@ -30,10 +27,12 @@ count_thread_args_t *pack_args(count_map_t *map, word_t *words, size_t num_words
 
 static void add_word_counts_in_chunk(count_map_t *map, word_t *words, size_t num_words,
                                      pthread_mutex_t *lock) {
-  // --------- Task 4 --------- \\
-  // Make this function thread-safe by using the lock
-
+  // Task 2: Make it thread-safe
   for (size_t i = 0; i < num_words; i++) {
+    if (lock) {
+      pthread_mutex_lock(lock);
+    }
+
     word_count_entry_t *w = NULL;
     HASH_FIND_STR(*map, words[i], w);
 
@@ -43,56 +42,55 @@ static void add_word_counts_in_chunk(count_map_t *map, word_t *words, size_t num
       w = create_entry(words[i], 1);
       HASH_ADD_STR(*map, word, w);
     }
+
+    if (lock) {
+      pthread_mutex_unlock(lock);
+    }
   }
 }
 
 static void *counter_thread_func(void *);
 
 static count_map_t count_words_parallel(word_t *words, size_t num_words) {
-  // --------- Task 2 --------- \\
-  // Implement this function
-  // Hints:
-  // - Use counter_thread_func for pthread_create(..) and modify as needed.
-  // - Store the threads and their arguments so you can manage them later
-  // - Initialize and pass the mutex to protect the critical sections (Task 4)
+  count_map_t map = NULL;
+  pthread_mutex_t count_mutex;
 
-  // My notes:
-  //
-  // typedef const char *word_t, means word_t is a pointer points to the first char of a null-ter
-  //-minated string e.g. word_t word = "hello";
-  // Therefore, word_t *words is a pointer points to a word_t, but here it means it points to the
-  // first element of an array with element type = word_t. Therefore, *words is the first word_t
-  // element, which points to the first char of the first string.
-  //
-  // num_words is just the number of elements in that array.
+  // Task 1: Implement this function
 
-  count_map_t map = NULL;      // the uthash table-head pointer
-  pthread_mutex_t count_mutex; // declaring the mutex object
+  const size_t THREAD_COUNT = 3;
+  pthread_t threads[THREAD_COUNT];
+  count_thread_args_t *threads_args[THREAD_COUNT];
+  size_t chunk_size = num_words / THREAD_COUNT;
 
-  pthread_t threads[THREAD_COUNT];                 // stores the 3 thread identifiers
-  count_thread_args_t *threads_args[THREAD_COUNT]; // stores th argument structure for each thread
-
-  size_t chunk_size = num_words / THREAD_COUNT; // 13/3 = 4, and the final threads have 5 words
-
-  // TODO: Perform initialization (on the mutex object)
-  // The mutex is to ensure that threads can perform safely, e.g.
-  // to prevent adding duplicate entries to the hash table.
   pthread_mutex_init(&count_mutex, NULL);
-  // end of TODO
 
   // Launch threads
   for (size_t i = 0; i < THREAD_COUNT; i++) {
-    word_t *thread_arg_words = words + i * chunk_size; // computing the begin of each chunk
-                                                       // e.g. i = 1, words + 1 * 4 = &words[4]
+    word_t *thread_arg_words = words + i * chunk_size;
+
     size_t thread_arg_num_words =
         chunk_size + (i == THREAD_COUNT - 1 ? num_words % THREAD_COUNT : 0);
 
-    // TODO: Prepare the arguments and launch the threads
+    count_thread_args_t *args =
+        pack_args(&map, thread_arg_words, thread_arg_num_words, &count_mutex);
+
+    threads_args[i] = args;
+
+    // Launch thread
+    pthread_create(&threads[i], NULL, counter_thread_func, args);
   }
 
-  // TODO: Wait for threads to finish
+  // Wait for threads to finish
+  for (size_t i = 0; i < THREAD_COUNT; i++) {
+    pthread_join(threads[i], NULL);
+  }
 
-  // TODO: Cleanup
+  // Cleanup
+  pthread_mutex_destroy(&count_mutex);
+
+  for (size_t i = 0; i < THREAD_COUNT; i++) {
+    free(threads_args[i]);
+  }
 
   return map;
 }
@@ -117,20 +115,26 @@ void delete_table(count_map_t);
 int main(void) {
   word_t words_in[13] = {"the",  "quick", "brown", "fox", "jumps", "over", "the",
                          "lazy", "dog",   "the",   "the", "fox",   "brown"};
+
   const size_t words_in_len = 13;
   count_map_t word_map = NULL;
 
-  // Task 2: Replace this function call with the parallelized version.
+  // Task 1: Replace this function call with the parallelized version.
+  // Hints:
+  // - You need to implement count_words_parallel
+  // - Use thread_func for pthread_create(..) and modify as needed.
+  // - You may want to use the thread sanitizer (see CMakeLists.txt).
+  // - Use arrays to store your threads and thread arguments
+  // - You need to protect critical sections (e.g. use a mutex)
   word_map = count_words_seq(words_in, words_in_len);
   // word_map = count_words_parallel(words_in, words_in_len);
 
   // Print table
   if (word_map) {
-    // --------- Task 1 --------- \\
+    // --------- Task 4 --------- \\
     // Sort the table by the sort function in uthash using `sort_func`.
     // TODO
     HASH_SORT(word_map, sort_func);
-    // end of TODO
     print_counts(word_map);
   }
 
@@ -144,21 +148,29 @@ int main(void) {
 
 word_count_entry_t *create_entry(word_t word, size_t count) {
   word_count_entry_t *ptr = malloc(sizeof(word_count_entry_t));
+
   ptr->word = word;
   ptr->count = count;
+
   return ptr;
 }
 
 int sort_func(word_count_entry_t *a, word_count_entry_t *b) { return strcmp(a->word, b->word); }
 
 void print_counts(count_map_t word_map) {
+  // -32s means left-aligning the value (-), using a field at least 32 char wide (32), and printing
+  // a string (s)
   printf("%-32s%-10s\n", "Word", "Count");
+
   word_count_entry_t *current, *tmp;
+  // similar to -32s, -10zu means printing a size_t as unsigned decimal integer with field width
+  // at least 10
   HASH_ITER(hh, word_map, current, tmp) { printf("%-32s%-10zu\n", current->word, current->count); }
 }
 
 void delete_table(count_map_t word_map) {
   word_count_entry_t *current, *tmp;
+
   HASH_ITER(hh, word_map, current, tmp) {
     HASH_DEL(word_map, current);
     free(current);
@@ -168,16 +180,19 @@ void delete_table(count_map_t word_map) {
 count_thread_args_t *pack_args(count_map_t *map, word_t *words, size_t num_words,
                                pthread_mutex_t *lock) {
   count_thread_args_t *args = malloc(sizeof(count_thread_args_t));
+
   args->map = map;
   args->words = words;
   args->num_words = num_words;
   args->lock = lock;
+
   return args;
 }
 
 static void *counter_thread_func(void *param) {
   // Call count_words_in_chunk with the appropriate arguments
   count_thread_args_t *args = (count_thread_args_t *)param;
+
   add_word_counts_in_chunk(args->map, args->words, args->num_words, args->lock);
 
   return NULL;
