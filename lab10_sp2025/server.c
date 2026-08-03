@@ -22,6 +22,8 @@ message and free their data buffer).
 4. How are threads used in this sample code?
 There is one acceptor thread to accept connections and to create a client thread for each client,
 each receive messages concurrently.
+5. Explain the use of non-blocking sockets:
+Each socket in this lab is non-blocking so accpet() and read() don't wait forerver.
 */
 
 #include <arpa/inet.h>
@@ -188,13 +190,12 @@ static void *run_acceptor(void *args) {
           handle_error("accept");
         }
       } else {
-        printf("Client connected!\n");
+        // printf("Client connected!\n");
 
         client_args[num_clients].cfd = cfd;
         client_args[num_clients].run = true;
         client_args[num_clients].list_handle = aargs->list_handle;
         client_args[num_clients].list_lock = aargs->list_lock;
-        num_clients++;
 
         // TODO: Create a new thread to handle the client
         int res =
@@ -203,6 +204,7 @@ static void *run_acceptor(void *args) {
           errno = res;
           handle_error("pthread_create");
         }
+        num_clients++;
         printf("Client connected!\n");
       }
     }
@@ -256,6 +258,7 @@ int main() {
     if (list_handle.count >= MAX_CLIENTS * NUM_MSG_PER_CLIENT) {
       enough_msgs = 1;
     }
+    pthread_mutex_unlock(&list_mutex);
     if (enough_msgs == 1) {
       break;
     }
