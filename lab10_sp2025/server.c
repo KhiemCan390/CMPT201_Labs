@@ -106,14 +106,25 @@ void set_non_blocking(int fd) {
     exit(EXIT_FAILURE);
   }
   if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) { // add O_NONBLOCK to the flags
-    // for accept() on the listening socket, e.g. int cfd = accept(sfd, NULL, NULL)
+    // for accept() on the listening socket, 
+    //e.g. int cfd = accept(sfd, NULL, NULL)
     // if a client is waiting, accept() succeeds immediately.
+    //otherwise return -1 with errno == EAGAIN or EWOULDBLOCK
+    //i.e. the operation can't be completed right now due to nothing available. 
+    
+    //e.g. ssize_t bytes_read = read(cfd, msg_buf, BUF_SIZE); 
+    //If bytes are available, read() returns them immediately.
+    //If no bytes are available, it returns -1 with EAGAIN or EWOULDBLOCK.
+    //If the peer has closed the connection, it returns 0.
+
+    //IN this lab 10 code, the listening socket and connected sockets are made nonblocking separately:
     perror("fcntl F_SETFL");
     exit(EXIT_FAILURE);
   }
 }
 
 void add_to_list(struct list_handle *list_handle, struct list_node *new_node) {
+  //notes: the function deson't lock any mutex. Therefore, teh caller mush block before calling it
   struct list_node *last_node = list_handle->last;
   last_node->next = new_node;
   list_handle->last = last_node->next;
@@ -121,15 +132,15 @@ void add_to_list(struct list_handle *list_handle, struct list_node *new_node) {
 }
 
 int collect_all(struct list_node head) {
-  struct list_node *node = head.next; // get first node after head
+  struct list_node *node = head.next; // get first node after head since the head is just a dummy list head and has no real message
   uint32_t total = 0;
 
   while (node != NULL) {
-    printf("Collected: %s\n", (char *)node->data);
+    printf("Collected: %s\n", (char *)node->data); ////print the message
     total++;
 
     // Free node and advance to next item
-    struct list_node *next = node->next;
+    struct list_node *next = node->next; 
     free(node->data);
     free(node);
     node = next;
@@ -139,13 +150,14 @@ int collect_all(struct list_node head) {
 }
 
 static void *run_client(void *args) {
-  struct client_args *cargs = (struct client_args *)args;
-  int cfd = cargs->cfd;
+  struct client_args *cargs = (struct client_args *)args; 
+  //extract the client's connected socket and set it to non-block
+  int cfd = cargs->cfd; 
   set_non_blocking(cfd);
 
   char msg_buf[BUF_SIZE];
 
-  while (cargs->run) {
+  while (cargs->run) { //reapeatedly check the atomic flag and attaempts to receive a message
     ssize_t bytes_read = read(cfd, &msg_buf, BUF_SIZE);
     if (bytes_read == -1) {
       if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
@@ -157,7 +169,7 @@ static void *run_client(void *args) {
       struct list_node *new_node = malloc(sizeof(struct list_node));
       new_node->next = NULL;
       new_node->data = malloc(BUF_SIZE);
-      memcpy(new_node->data, msg_buf, BUF_SIZE);
+      memcpy(new_node->data, msg_buf, BUF_SIZE); //copy the received message to the allocated buffer
 
       struct list_handle *list_handle = cargs->list_handle;
       // TODO: Safely use add_to_list to add new_node to the list
