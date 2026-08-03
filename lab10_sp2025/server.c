@@ -37,7 +37,7 @@ Each socket in this lab is non-blocking so accpet() and read() don't wait forerv
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#define BUF_SIZE 1024
+#define BUF_SIZE 1024 // to store a message
 #define PORT 8001
 #define LISTEN_BACKLOG 32
 #define MAX_CLIENTS 4
@@ -55,16 +55,16 @@ struct list_node {
 };
 
 struct list_handle {
-  struct list_node *last;
-  volatile uint32_t count;
+  struct list_node *last;  // keeps the last node in the list
+  volatile uint32_t count; // the number of messages in the list
 };
 
 struct client_args {
-  atomic_bool run;
+  atomic_bool run; // whether it should continue running
 
-  int cfd;
-  struct list_handle *list_handle;
-  pthread_mutex_t *list_lock;
+  int cfd;                         // connected socket for that client
+  struct list_handle *list_handle; // shared message list
+  pthread_mutex_t *list_lock;      // list lock
 };
 
 struct acceptor_args {
@@ -95,17 +95,19 @@ int init_server_socket() {
     handle_error("listen");
   }
 
-  return sfd;
+  return sfd; // return the listening socket file descr to the acceptor thread
 }
 
 // Set a file descriptor to non-blocking mode
 void set_non_blocking(int fd) {
-  int flags = fcntl(fd, F_GETFL, 0);
+  int flags = fcntl(fd, F_GETFL, 0); // get the fd's flags
   if (flags == -1) {
     perror("fcntl F_GETFL");
     exit(EXIT_FAILURE);
   }
-  if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+  if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) { // add O_NONBLOCK to the flags
+    // for accept() on the listening socket, e.g. int cfd = accept(sfd, NULL, NULL)
+    // if a client is waiting, accept() succeeds immediately.
     perror("fcntl F_SETFL");
     exit(EXIT_FAILURE);
   }
