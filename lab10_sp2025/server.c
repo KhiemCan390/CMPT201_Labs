@@ -282,9 +282,12 @@ int main() {
       break;
     }
   }
+  //tells the acceptor thread to stop
   aargs.run = false;
+  //waits for the acceptor threads to stop
   pthread_join(acceptor_thread, NULL);
 
+  //verify that the expected count was received 
   if (list_handle.count != MAX_CLIENTS * NUM_MSG_PER_CLIENT) {
     printf("Not enough messages were received!\n");
     return 1;
@@ -292,6 +295,8 @@ int main() {
 
   int collected = collect_all(head);
   printf("Collected: %d\n", collected);
+
+  //checking if the number of stored message == number of collected messages.
   if (collected != list_handle.count) {
     printf("Not all messages were collected!\n");
     return 1;
