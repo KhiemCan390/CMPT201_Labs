@@ -186,18 +186,21 @@ static void *run_client(void *args) {
 }
 
 static void *run_acceptor(void *args) {
+  //creates the listnening socket
   int sfd = init_server_socket();
   set_non_blocking(sfd);
 
   struct acceptor_args *aargs = (struct acceptor_args *)args;
+  //declaring storage for client threads
   pthread_t threads[MAX_CLIENTS];
   struct client_args client_args[MAX_CLIENTS];
 
   printf("Accepting clients...\n");
 
   uint16_t num_clients = 0;
-  while (aargs->run) {
+  while (aargs->run) { //keep running as the atomic flag is true
     if (num_clients < MAX_CLIENTS) {
+      //;while there aren't enough clients
       int cfd = accept(sfd, NULL, NULL);
       if (cfd == -1) {
         if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
@@ -223,11 +226,12 @@ static void *run_acceptor(void *args) {
       }
     }
   }
-
+  //when main() set aargs.run = false, the loop ends
   printf("Not accepting any more clients!\n");
 
   // Shutdown and cleanup
   for (int i = 0; i < num_clients; i++) {
+    //Now we stop every client thread
     // TODO: Set flag to stop the client thread
     // TODO: Wait for the client thread and close its socket
     client_args[i].run = false;
