@@ -272,6 +272,7 @@ int main() {
   // TODO: Wait until enough messages are received
   while (true) {
     pthread_mutex_lock(&list_mutex);
+    //the lock is for "count" which can be modified by multiple client threads
     int enough_msgs = 0;
     if (list_handle.count >= MAX_CLIENTS * NUM_MSG_PER_CLIENT) {
       enough_msgs = 1;
