@@ -122,9 +122,19 @@ int verify(const char *message_path, const char *sign_path, EVP_PKEY *pubkey) {
     return -1;
   }
 
-  EVP_DigestVerifyInit(msg_digest_ctx, NULL, EVP_sha256(), NULL, pubkey);
+  int res = EVP_DigestVerifyInit(msg_digest_ctx, NULL, EVP_sha256(), NULL, pubkey);
+  if (res != 1) {
+    ERR_print_errors_fp(stderr);
+    EVP_MD_CTX_free(msg_digest_ctx);
+    return -1;
+  }
 
-  EVP_DigestVerifyUpdate(msg_digest_ctx, message, msg_sz);
+  int res2 = EVP_DigestVerifyUpdate(msg_digest_ctx, message, msg_sz);
+  if (res2 != 1) {
+    ERR_print_errors_fp(stderr);
+    EVP_MD_CTX_free(msg_digest_ctx);
+    return -1;
+  }
 
   int result = EVP_DigestVerifyFinal(msg_digest_ctx, signature, sgn_sz);
 
