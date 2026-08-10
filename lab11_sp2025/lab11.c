@@ -61,7 +61,18 @@ int main() {
   const char *signature_files[] = {"signature1.sig", "signature2.sig", "signature3.sig"};
 
   // TODO: Load the public key using PEM_read_PUBKEY
-  EVP_PKEY *pubkey = NULL;
+  FILE *pubkey_file = fopen("public_key.pem", "r");
+  if (pubkey_file == NULL) {
+    handle_error("Error opening public key");
+  }
+
+  EVP_PKEY *pubkey = PEM_read_PUBKEY(pubkey_file, NULL, NULL, NULL);
+
+  fclose(pubkey_file);
+
+  if (pubkey == NULL) {
+    handle_error("pubkey is NULL");
+  }
 
   // Verify each message
   for (int i = 0; i < 3; i++) {
