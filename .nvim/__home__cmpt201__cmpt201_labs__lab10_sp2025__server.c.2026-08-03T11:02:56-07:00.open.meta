@@ -1,0 +1,8 @@
+trigger:open
+undo_seq:0
+source_path:/home/cmpt201/cmpt201_labs/lab10_sp2025/server.c
+cursor:1,1
+lines:286
+changedtick:2
+reg_size:23
+source_relpath:lab10_sp2025/server.c
